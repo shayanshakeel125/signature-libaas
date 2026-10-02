@@ -17,7 +17,6 @@ const Navbar = () => {
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
 
-  // Scroll detection for premium effect
   useEffect(() => {
     const handleScroll = () => setScrolled(window.scrollY > 20);
     window.addEventListener('scroll', handleScroll);
@@ -43,10 +42,16 @@ const Navbar = () => {
     <>
       <nav className={`navbar ${scrolled ? 'navbar-scrolled' : ''}`}>
         <div className="nav-container">
-          
+
           {/* LOGO */}
           <Link to="/" className="logo" onClick={handleLinkClick}>
-            <img src="/images/logo.png" alt="Signature Libaas" className="logo-img" />
+            <div className="logo-crop">
+              <img
+                src={`${import.meta.env.BASE_URL}images/${theme === 'dark' ? 'logo-dark.png' : 'logo-light.png'}`}
+                alt="Signature Libaas"
+                className="logo-img"
+              />
+            </div>
           </Link>
 
           {/* NAV LINKS */}
