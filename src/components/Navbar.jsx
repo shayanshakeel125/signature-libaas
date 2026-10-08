@@ -47,7 +47,7 @@ const Navbar = () => {
     document.addEventListener('mousedown', handleOutsideClick);
     return () => document.removeEventListener('mousedown', handleOutsideClick);
   }, [isUserMenuOpen, isDropdownOpen]);
-
+z
   const handleLinkClick = () => {
     setIsMenuOpen(false);
     setIsDropdownOpen(false);
