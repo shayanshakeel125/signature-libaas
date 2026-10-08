@@ -1,16 +1,18 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { NavLink, Link } from 'react-router-dom';
 import { useTheme } from '../context/ThemeContext';
 import { useCart } from '../context/CartContext';
 import { useWishlist } from '../context/WishlistContext';
 import { useAuth } from '../context/AuthContext';
+import { useSettings } from '../context/SettingsContext';
 import SearchBar from './SearchBar';
 
 const Navbar = () => {
   const { theme, toggleTheme } = useTheme();
   const { cartCount } = useCart();
   const { wishlistCount } = useWishlist();
-  const { user, logout } = useAuth();
+  const { user, logout, isAdmin } = useAuth();
+  const { settings } = useSettings();
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
@@ -22,6 +24,29 @@ const Navbar = () => {
     window.addEventListener('scroll', handleScroll);
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
+
+  // ===== OUTSIDE CLICK → dropdown close (Requirement 1-5) =====
+  const userMenuRef = useRef(null);      // .user-menu-wrapper (button + dropdown)
+  const categoriesRef = useRef(null);    // .dropdown (trigger + menu)
+
+  useEffect(() => {
+    // Listener sirf tab lagao jab koi dropdown khula ho (performance + no-op clicks)
+    if (!isUserMenuOpen && !isDropdownOpen) return;
+
+    const handleOutsideClick = (e) => {
+      // User menu: sirf tab close jab click wrapper ke BAHAR ho
+      if (userMenuRef.current && !userMenuRef.current.contains(e.target)) {
+        setIsUserMenuOpen(false);
+      }
+      // Categories: sirf tab close jab click dropdown ke BAHAR ho
+      if (categoriesRef.current && !categoriesRef.current.contains(e.target)) {
+        setIsDropdownOpen(false);
+      }
+    };
+
+    document.addEventListener('mousedown', handleOutsideClick);
+    return () => document.removeEventListener('mousedown', handleOutsideClick);
+  }, [isUserMenuOpen, isDropdownOpen]);
 
   const handleLinkClick = () => {
     setIsMenuOpen(false);
@@ -47,8 +72,12 @@ const Navbar = () => {
           <Link to="/" className="logo" onClick={handleLinkClick}>
             <div className="logo-crop">
               <img
-                src={`${import.meta.env.BASE_URL}images/${theme === 'dark' ? 'logo-dark.png' : 'logo-light.png'}`}
-                alt="Signature Libaas"
+                src={
+                  settings.logo ||
+                  `${import.meta.env.BASE_URL}images/${theme === 'dark' ? 'logo-dark.png' : 'logo-light.png'}`
+                }
+                alt={settings.brandName}
+                title={settings.brandName}
                 className="logo-img"
               />
             </div>
@@ -61,6 +90,7 @@ const Navbar = () => {
             </NavLink>
 
             <div className={`dropdown ${isDropdownOpen ? 'open' : ''}`}
+              ref={categoriesRef}
               onMouseEnter={() => setIsDropdownOpen(true)}
               onMouseLeave={() => setIsDropdownOpen(false)}
             >
@@ -82,12 +112,19 @@ const Navbar = () => {
               </div>
             </div>
 
-            <NavLink to="/about" className={({ isActive }) => isActive ? 'active-link' : ''} onClick={handleLinkClick}>
-              <span>About</span>
-            </NavLink>
-            <NavLink to="/contact" className={({ isActive }) => isActive ? 'active-link' : ''} onClick={handleLinkClick}>
-              <span>Contact</span>
-            </NavLink>
+            {/* Admin-configurable links (Site Settings → Navbar Links) */}
+            {settings.navLinks
+              .filter(l => l.label && l.to && l.to.startsWith('/'))
+              .map(link => (
+                <NavLink
+                  key={`${link.label}-${link.to}`}
+                  to={link.to}
+                  className={({ isActive }) => isActive ? 'active-link' : ''}
+                  onClick={handleLinkClick}
+                >
+                  <span>{link.label}</span>
+                </NavLink>
+              ))}
           </div>
 
           {/* NAV ACTIONS */}
@@ -164,9 +201,24 @@ const Navbar = () => {
               )}
             </Link>
 
+            {/* ADMIN BADGE (sirf tab jab admin logged in ho) */}
+            {isAdmin && (
+              <Link
+                to="/admin"
+                className="admin-nav-badge"
+                onClick={handleLinkClick}
+                title="Admin Dashboard"
+              >
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" width="16" height="16">
+                  <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path>
+                </svg>
+                <span>Admin</span>
+              </Link>
+            )}
+
             {/* USER MENU */}
             {user ? (
-              <div className="user-menu-wrapper">
+              <div className="user-menu-wrapper" ref={userMenuRef}>
                 <button
                   className="user-avatar-btn"
                   onClick={toggleUserMenu}

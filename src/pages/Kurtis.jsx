@@ -1,17 +1,23 @@
 import React, { useState, useMemo } from 'react';
 import ProductCard from '../components/ProductCard';
 import FilterSort from '../components/FilterSort';
-import { kurtis } from '../data/products';
+import { useProducts, matchCategory } from '../context/ProductsContext';
 
 const Kurtis = () => {
+  const { products: allProducts } = useProducts();
   const [sortBy, setSortBy] = useState('featured');
   const [priceFilter, setPriceFilter] = useState('all');
   const [sizeFilter, setSizeFilter] = useState([]);
 
-  const parsePrice = (priceStr) => parseInt(priceStr.replace(/[^0-9]/g, '')) || 0;
+  const parsePrice = (priceStr) => parseInt(String(priceStr).replace(/[^0-9]/g, '')) || 0;
+
+  const categoryProducts = useMemo(
+    () => allProducts.filter(p => matchCategory(p, 'kurtis')),
+    [allProducts]
+  );
 
   const filteredProducts = useMemo(() => {
-    let products = [...kurtis];
+    let products = [...categoryProducts];
 
     if (priceFilter !== 'all') {
       products = products.filter(p => {
@@ -48,7 +54,7 @@ const Kurtis = () => {
     }
 
     return products;
-  }, [sortBy, priceFilter, sizeFilter]);
+  }, [categoryProducts, sortBy, priceFilter, sizeFilter]);
 
   return (
     <div className="page-container">
@@ -68,7 +74,7 @@ const Kurtis = () => {
           sizeFilter={sizeFilter}
           setSizeFilter={setSizeFilter}
           availableSizes={['S', 'M', 'L', 'XL']}
-          totalProducts={kurtis.length}
+          totalProducts={categoryProducts.length}
           filteredCount={filteredProducts.length}
         />
 
@@ -77,7 +83,7 @@ const Kurtis = () => {
             <div className="empty-state">
               <div className="big-icon">🔍</div>
               <h3>No Products Found</h3>
-              <p>Try changing your filters</p>
+              <p>{categoryProducts.length === 0 ? 'New Kurtis are coming soon!' : 'Try changing your filters'}</p>
             </div>
           ) : (
             <div className="product-grid">

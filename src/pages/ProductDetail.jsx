@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import { getProductById } from '../data/products';
+import { useProducts } from '../context/ProductsContext';
 import { useCart } from '../context/CartContext';
 import SizeGuideModal from '../components/SizeGuideModal';
 import RecentlyViewed from '../components/RecentlyViewed';
@@ -9,8 +10,10 @@ const ProductDetail = () => {
   const { id } = useParams();
   const navigate = useNavigate();
   const { addToCart } = useCart();
+  const { products } = useProducts();
   
-  const product = getProductById(id);
+  // Admin ke localStorage products pehle, warna static products.js fallback
+  const product = products.find(p => String(p.id) === String(id)) || getProductById(id);
   const [selectedImage, setSelectedImage] = useState(0);
   const [quantity, setQuantity] = useState(1);
   const [selectedSize, setSelectedSize] = useState('');

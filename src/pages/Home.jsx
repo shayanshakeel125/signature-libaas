@@ -1,47 +1,20 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { Link } from 'react-router-dom';
 import ProductCard from '../components/ProductCard';
 import Testimonials from '../components/Testimonials';
 import InstagramFeed from '../components/instagaramFeed';
-import { tShirts, kurtis } from '../data/products';
-
-const slides = [
-  { 
-    id: 1, 
-    image: 'https://images.unsplash.com/photo-1490481651871-ab68de25d43d?w=1600&q=80',
-    tag: 'NEW ARRIVALS 2026',
-    title: 'Summer Collection',
-    subtitle: 'Discover timeless elegance crafted for the modern wardrobe',
-    cta: 'Shop Collection',
-    link: '/tshirts',
-    accent: 'Summer'
-  },
-  { 
-    id: 2, 
-    image: 'https://images.unsplash.com/photo-1483985988355-763728e1935b?w=1600&q=80',
-    tag: 'FESTIVE EDIT',
-    title: 'Eid Specials',
-    subtitle: 'Exclusive designs for your most memorable celebrations',
-    cta: 'Explore Now',
-    link: '/kurtis',
-    accent: 'Eid'
-  },
-  { 
-    id: 3, 
-    image: 'https://images.unsplash.com/photo-1445205170230-053b83016050?w=1600&q=80',
-    tag: 'PREMIUM QUALITY',
-    title: 'Pret Wear Launches',
-    subtitle: 'Where tradition meets modern aesthetics in every stitch',
-    cta: 'Discover More',
-    link: '/tshirts',
-    accent: 'Pret Wear'
-  },
-];
+import { useProducts, matchCategory } from '../context/ProductsContext';
+import { useSettings } from '../context/SettingsContext';
 
 const Home = () => {
   const [currentSlide, setCurrentSlide] = useState(0);
   const [isPaused, setIsPaused] = useState(false);
   const [progress, setProgress] = useState(0);
+
+  // Admin se editable hero slides (Site Settings)
+  const { settings } = useSettings();
+  const { products } = useProducts();
+  const slides = settings.heroSlides;
 
   // Auto-play with progress bar
   useEffect(() => {
@@ -80,7 +53,15 @@ const Home = () => {
     setProgress(0);
   };
 
-  const featuredProducts = [tShirts[0], kurtis[0], tShirts[3], kurtis[2]];
+  // Admin ke products (localStorage) se featured selection — fallback static data
+  const featuredProducts = useMemo(() => {
+    const tshirtList = products.filter(p => matchCategory(p, 'tshirts'));
+    const kurtiList = products.filter(p => matchCategory(p, 'kurtis'));
+    const picked = [tshirtList[0], kurtiList[0], tshirtList[3] || tshirtList[1], kurtiList[2] || kurtiList[1]];
+    const list = picked.filter(Boolean);
+    if (list.length) return list;
+    return products.slice(0, 4);
+  }, [products]);
 
   return (
     <div className="page-container">
@@ -101,7 +82,7 @@ const Home = () => {
               {/* Background Image with Ken Burns */}
               <div className="slide-bg-wrapper">
                 <img 
-                  src={slide.image} 
+                  src={slide.image || 'https://images.unsplash.com/photo-1490481651871-ab68de25d43d?w=1600&q=80'} 
                   alt={slide.title} 
                   className={`slide-bg-img ${idx === currentSlide ? 'ken-burns-active' : ''}`}
                 />
@@ -175,7 +156,7 @@ const Home = () => {
               className={`thumb-item ${idx === currentSlide ? 'active' : ''}`}
               onClick={() => goToSlide(idx)}
             >
-              <img src={slide.image} alt={`Slide ${idx + 1}`} />
+              <img src={slide.image || 'https://images.unsplash.com/photo-1490481651871-ab68de25d43d?w=1600&q=80'} alt={`Slide ${idx + 1}`} />
               <div className="thumb-overlay">
                 <span className="thumb-number">0{idx + 1}</span>
               </div>
@@ -237,16 +218,24 @@ const Home = () => {
           <p>Handpicked pieces loved by our customers</p>
         </div>
         <div className="product-grid">
-          {featuredProducts.map((product) => (
-            <ProductCard 
-              key={product.id}
-              id={product.id}
-              name={product.name}
-              price={product.price}
-              image={product.images[0]}
-              badge={product.badge}
-            />
-          ))}
+          {featuredProducts.length === 0 ? (
+            <div className="empty-state" style={{ gridColumn: '1 / -1' }}>
+              <div className="big-icon">🛍️</div>
+              <h3>No Products Yet</h3>
+              <p>Check back soon — new arrivals are on the way!</p>
+            </div>
+          ) : (
+            featuredProducts.map((product) => (
+              <ProductCard 
+                key={product.id}
+                id={product.id}
+                name={product.name}
+                price={product.price}
+                image={product.images[0]}
+                badge={product.badge}
+              />
+            ))
+          )}
         </div>
       </section>
 

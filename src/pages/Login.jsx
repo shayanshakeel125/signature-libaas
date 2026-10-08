@@ -101,6 +101,11 @@ const Login = () => {
         <p className="auth-footer-text">
           Don't have an account? <Link to="/signup">Sign Up</Link>
         </p>
+
+        {/* Admin ko /admin/* se yahan redirect kiya jata hai — wapas admin login par */}
+        <p className="auth-footer-text" style={{ marginTop: '8px', fontSize: '0.83rem' }}>
+          Staff member? <Link to="/admin/login">Admin Login</Link>
+        </p>
       </div>
     </div>
   );

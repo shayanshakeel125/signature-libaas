@@ -1,9 +1,10 @@
 import React, { useEffect } from 'react';
-import { Routes, Route, useLocation } from 'react-router-dom';
+import { Routes, Route, useLocation, Navigate } from 'react-router-dom';
 import Navbar from './components/Navbar';
 import Footer from './components/Footer';
 import ScrollToTop from './components/ScrollToTop';
 import WhatsAppButton from './components/WhatsAppButton';
+import Toaster from './components/Toaster';
 import Home from './pages/Home';
 import About from './pages/About';
 import TShirts from './pages/TShirts';
@@ -22,6 +23,15 @@ import Signup from './pages/Signup';
 import Profile from './pages/Profile';
 import TrackOrder from './pages/TrackOrder';
 import OrderSuccess from './pages/OrderSuccess';
+
+// Admin
+import AdminLogin from './pages/Admin/AdminLogin';
+import AdminDashboard from './pages/Admin/AdminDashboard';
+import AdminProducts from './pages/Admin/AdminProducts';
+import AdminCategories from './pages/Admin/AdminCategories';
+import AdminOrders from './pages/Admin/AdminOrders';
+import AdminSettings from './pages/Admin/AdminSettings';
+import { AdminRoute } from './pages/Admin/AdminLayout';
 
 // 🎯 Page change aur refresh par scroll top
 const ScrollToTopOnNavigate = () => {
@@ -43,13 +53,19 @@ const ScrollToTopOnNavigate = () => {
 };
 
 export default function App() {
+  const location = useLocation();
+  const isAdminRoute = location.pathname.startsWith('/admin');
+
   return (
     <div className="app-wrapper">
       <ScrollToTopOnNavigate />
 
-      <Navbar />
-      <main className="main-content">
+      {/* Storefront navbar/footer admin me nahi dikhta (sidebar layout hota hai) */}
+      {!isAdminRoute && <Navbar />}
+
+      <main className={isAdminRoute ? 'admin-viewport' : 'main-content'}>
         <Routes>
+          {/* ===== STOREFRONT ===== */}
           <Route path="/" element={<Home />} />
           <Route path="/about" element={<About />} />
           <Route path="/tshirts" element={<TShirts />} />
@@ -67,12 +83,31 @@ export default function App() {
           <Route path="/profile" element={<Profile />} />
           <Route path="/track-order" element={<TrackOrder />} />
           <Route path="/order-success/:id" element={<OrderSuccess />} />
+
+          {/* ===== ADMIN (protected) ===== */}
+          <Route path="/admin/login" element={<AdminLogin />} />
+          <Route path="/admin" element={<AdminRoute />}>
+            <Route index element={<AdminDashboard />} />
+            <Route path="products" element={<AdminProducts />} />
+            <Route path="categories" element={<AdminCategories />} />
+            <Route path="orders" element={<AdminOrders />} />
+            <Route path="settings" element={<AdminSettings />} />
+            <Route path="*" element={<Navigate to="/admin" replace />} />
+          </Route>
+
           <Route path="*" element={<NotFound />} />
         </Routes>
       </main>
-      <Footer />
+
+      {!isAdminRoute && (
+        <>
+          <Footer />
+          <WhatsAppButton />
+        </>
+      )}
+
       <ScrollToTop />
-      <WhatsAppButton />
+      <Toaster />
     </div>
   );
 }
