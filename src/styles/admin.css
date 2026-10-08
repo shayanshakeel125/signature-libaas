@@ -1507,9 +1507,9 @@
 /* ---------- Toasts ---------- */
 .toast-container {
   position: fixed;
-  top: 20px;
+  top: 84px;
   right: 20px;
-  z-index: 999;
+  z-index: 1200;
   display: flex;
   flex-direction: column;
   gap: 10px;

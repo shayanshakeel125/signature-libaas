@@ -5,6 +5,7 @@ import Footer from './components/Footer';
 import ScrollToTop from './components/ScrollToTop';
 import WhatsAppButton from './components/WhatsAppButton';
 import Toaster from './components/Toaster';
+import Chatbot from './components/chatbot/Chatbot';
 import Home from './pages/Home';
 import About from './pages/About';
 import TShirts from './pages/TShirts';
@@ -103,6 +104,8 @@ export default function App() {
         <>
           <Footer />
           <WhatsAppButton />
+          {/* Signature AI – sirf user (storefront) panel par, admin panel par nahi */}
+          <Chatbot />
         </>
       )}
 

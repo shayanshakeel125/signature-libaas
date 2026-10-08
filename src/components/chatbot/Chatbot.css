@@ -1,0 +1,860 @@
+/* ============================================================
+   Signature AI – floating shopping assistant
+   Automatically follows the website theme (data-theme on <html>)
+   ============================================================ */
+
+/* ---------- Theme tokens (chat scoped) ---------- */
+.sig-chat-root {
+  /* Brand blue accent */
+  --sigchat-blue: #1d4ed8;
+  --sigchat-blue-light: #3b82f6;
+  --sigchat-blue-soft: rgba(29, 78, 216, 0.09);
+  --sigchat-blue-border: rgba(29, 78, 216, 0.28);
+  --sigchat-green: #16a34a;
+
+  /* Light surfaces (glass) */
+  --sigchat-window-bg: rgba(255, 255, 255, 0.94);
+  --sigchat-header-bg: rgba(255, 255, 255, 0.98);
+  --sigchat-list-bg: rgba(250, 248, 245, 0.92);
+  --sigchat-footer-bg: rgba(255, 255, 255, 0.98);
+  --sigchat-card: #ffffff;
+  --sigchat-input-bg: #f6f4f0;
+  --sigchat-shadow: 0 24px 55px rgba(0, 0, 0, 0.16), 0 6px 16px rgba(0, 0, 0, 0.08);
+
+  /* Shared */
+  --sigchat-user-bubble: linear-gradient(135deg, #1d4ed8, #3b82f6);
+  --sigchat-user-bubble-shadow: rgba(29, 78, 216, 0.25);
+  --sigchat-text: var(--text-primary);
+  --sigchat-text-2: var(--text-secondary);
+  --sigchat-text-3: var(--text-light);
+  --sigchat-border: var(--border);
+}
+
+[data-theme='dark'] .sig-chat-root {
+  --sigchat-blue: #7aa8ff;
+  --sigchat-blue-light: #9cc0ff;
+  --sigchat-blue-soft: rgba(122, 168, 255, 0.13);
+  --sigchat-blue-border: rgba(122, 168, 255, 0.34);
+  --sigchat-green: #4ade80;
+
+  --sigchat-window-bg: rgba(16, 16, 18, 0.95);
+  --sigchat-header-bg: rgba(21, 21, 24, 0.98);
+  --sigchat-list-bg: rgba(9, 9, 11, 0.93);
+  --sigchat-footer-bg: rgba(21, 21, 24, 0.98);
+  --sigchat-card: #1a1a1d;
+  --sigchat-input-bg: #101013;
+  --sigchat-shadow: 0 26px 65px rgba(0, 0, 0, 0.62), 0 6px 18px rgba(0, 0, 0, 0.45);
+
+  --sigchat-user-bubble-shadow: rgba(29, 78, 216, 0.4);
+}
+
+/* ---------- Root (fixed, bottom-left) ---------- */
+.sig-chat-root {
+  position: fixed;
+  left: 28px;
+  bottom: 30px;
+  z-index: 1400; /* above navbar (1000), below modals (3000) */
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 46px; /* room for the typing bubble above the avatar */
+  font-family: 'Inter', sans-serif;
+  pointer-events: none; /* empty space never blocks the page */
+  transition: opacity 0.3s ease;
+}
+
+.sig-chat-launcher,
+.sig-chat-window {
+  pointer-events: auto;
+}
+
+/* Screen-reader-only utility */
+.sig-chat-sr {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+/* ============================================================
+   FLOATING AVATAR
+   ============================================================ */
+.sig-chat-launcher {
+  position: relative;
+  z-index: 2;
+  align-self: flex-start;
+}
+
+.sig-chat-avatar {
+  position: relative;
+  display: block;
+  width: 64px;
+  height: 64px;
+  padding: 0;
+  border-radius: 50%;
+  border: 2px solid var(--gold);
+  background: var(--bg-secondary);
+  cursor: pointer;
+  box-shadow: 0 12px 28px rgba(0, 0, 0, 0.3), 0 0 0 4px rgba(201, 169, 97, 0.16);
+  transition: box-shadow 0.3s ease;
+  animation: sigChatFloat 4.5s ease-in-out infinite;
+}
+
+.sig-chat-avatar img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  border-radius: 50%;
+  transition: transform 0.35s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.sig-chat-avatar:hover {
+  box-shadow: 0 16px 36px rgba(0, 0, 0, 0.36), 0 0 0 5px rgba(201, 169, 97, 0.24);
+}
+
+.sig-chat-avatar:hover img {
+  transform: scale(1.08);
+}
+
+.sig-chat-avatar:focus-visible {
+  outline: 2px solid var(--sigchat-blue);
+  outline-offset: 3px;
+}
+
+/* Online status dot */
+.sig-chat-avatar__status {
+  position: absolute;
+  right: 1px;
+  bottom: 3px;
+  width: 13px;
+  height: 13px;
+  border-radius: 50%;
+  background: var(--sigchat-green);
+  border: 2.5px solid var(--bg-primary);
+}
+
+.sig-chat-avatar__status::after {
+  content: '';
+  position: absolute;
+  inset: -3px;
+  border-radius: 50%;
+  border: 2px solid var(--sigchat-green);
+  opacity: 0;
+  animation: sigChatStatusPulse 2.8s ease-out infinite;
+}
+
+/* "Alive" while the AI is writing a reply */
+.sig-chat-avatar.is-typing {
+  animation: sigChatThink 1.5s ease-in-out infinite;
+}
+
+.sig-chat-avatar.is-typing::after {
+  content: '';
+  position: absolute;
+  inset: -5px;
+  border-radius: 50%;
+  border: 2px solid var(--sigchat-blue);
+  opacity: 0;
+  animation: sigChatRingPulse 1.7s ease-out infinite;
+}
+
+/* Hover label */
+.sig-chat-avatar__label {
+  position: absolute;
+  left: calc(100% + 12px);
+  top: 50%;
+  transform: translateY(-50%) translateX(-6px);
+  padding: 7px 14px;
+  border-radius: 999px;
+  background: var(--text-primary);
+  color: var(--bg-secondary);
+  font-size: 0.76rem;
+  font-weight: 600;
+  white-space: nowrap;
+  opacity: 0;
+  pointer-events: none;
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.2);
+  transition: opacity 0.25s ease, transform 0.25s ease;
+}
+
+.sig-chat-launcher:hover .sig-chat-avatar__label,
+.sig-chat-avatar:focus-visible ~ .sig-chat-avatar__label {
+  opacity: 1;
+  transform: translateY(-50%) translateX(0);
+}
+
+.sig-chat-root.is-open .sig-chat-avatar__label {
+  opacity: 0 !important;
+}
+
+/* ============================================================
+   TYPING BUBBLE ABOVE THE ROBOT'S HEAD
+   ============================================================ */
+.sig-chat-float-typing {
+  position: absolute;
+  left: 2px;
+  bottom: calc(100% + 8px);
+  z-index: 3;
+  line-height: 1;
+  padding: 8px 13px;
+  background: var(--sigchat-card);
+  border: 1px solid var(--sigchat-border);
+  border-radius: 14px 14px 14px 4px;
+  color: var(--sigchat-blue);
+  box-shadow: 0 12px 26px rgba(0, 0, 0, 0.16);
+  transform-origin: bottom left;
+  animation: sigChatFloatIn 0.32s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+.sig-chat-float-typing::after {
+  content: '';
+  position: absolute;
+  left: 15px;
+  bottom: -5px;
+  width: 10px;
+  height: 10px;
+  background: var(--sigchat-card);
+  border-right: 1px solid var(--sigchat-border);
+  border-bottom: 1px solid var(--sigchat-border);
+  transform: rotate(45deg);
+}
+
+/* Animated three dots */
+.sig-chat-dots {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.sig-chat-dots i {
+  display: block;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: currentColor;
+  animation: sigChatDot 1.25s ease-in-out infinite;
+}
+
+.sig-chat-dots i:nth-child(2) {
+  animation-delay: 0.16s;
+}
+
+.sig-chat-dots i:nth-child(3) {
+  animation-delay: 0.32s;
+}
+
+/* ============================================================
+   CHAT WINDOW
+   ============================================================ */
+.sig-chat-window {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  flex-direction: column;
+  width: min(384px, calc(100vw - 56px));
+  /* keeps the header + close button clear of the sticky navbar at all times */
+  height: min(560px, calc(100vh - 240px));
+  min-height: 320px;
+  background: var(--sigchat-window-bg);
+  backdrop-filter: blur(18px);
+  -webkit-backdrop-filter: blur(18px);
+  border: 1px solid var(--sigchat-border);
+  border-radius: 20px;
+  box-shadow: var(--sigchat-shadow);
+  overflow: hidden;
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+  transform: translateY(26px) scale(0.9);
+  transform-origin: bottom left;
+  transition:
+    opacity 0.28s ease,
+    transform 0.4s cubic-bezier(0.22, 1, 0.36, 1),
+    visibility 0s linear 0.4s;
+}
+
+.sig-chat-root.is-open .sig-chat-window {
+  opacity: 1;
+  visibility: visible;
+  pointer-events: auto;
+  transform: translateY(0) scale(1);
+  transition-delay: 0s;
+}
+
+/* ---------- Header ---------- */
+.sig-chat-header {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 11px;
+  flex-shrink: 0;
+  padding: 12px 12px 12px 14px;
+  background: var(--sigchat-header-bg);
+  border-bottom: 1px solid var(--sigchat-border);
+}
+
+.sig-chat-header::after {
+  content: '';
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: -1px;
+  height: 1.5px;
+  background: linear-gradient(90deg, var(--gold), var(--sigchat-blue-light), transparent);
+  opacity: 0.55;
+}
+
+.sig-chat-header__avatar {
+  position: relative;
+  flex-shrink: 0;
+  width: 40px;
+  height: 40px;
+}
+
+.sig-chat-header__avatar img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  border-radius: 50%;
+  border: 1.5px solid var(--gold);
+}
+
+.sig-chat-header__status {
+  position: absolute;
+  right: -1px;
+  bottom: -1px;
+  width: 11px;
+  height: 11px;
+  border-radius: 50%;
+  background: var(--sigchat-green);
+  border: 2px solid var(--sigchat-header-bg);
+}
+
+.sig-chat-header__meta {
+  flex: 1;
+  min-width: 0;
+}
+
+.sig-chat-header__name {
+  margin: 0;
+  font-family: 'Inter', sans-serif;
+  font-size: 0.98rem;
+  font-weight: 600;
+  letter-spacing: 0.2px;
+  line-height: 1.25;
+  color: var(--sigchat-text);
+}
+
+.sig-chat-header__brand {
+  font-family: 'Playfair Display', serif;
+  font-style: italic;
+  font-weight: 600;
+  background: var(--gradient);
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+.sig-chat-header__presence {
+  margin: 0;
+  font-size: 0.72rem;
+  font-weight: 500;
+  letter-spacing: 0.3px;
+  color: var(--sigchat-green);
+}
+
+.sig-chat-header__presence.is-typing {
+  color: var(--sigchat-blue);
+}
+
+.sig-chat-close {
+  flex-shrink: 0;
+  width: 32px;
+  height: 32px;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  border: 1px solid var(--sigchat-border);
+  background: transparent;
+  color: var(--sigchat-text-2);
+  cursor: pointer;
+  transition: all 0.25s ease;
+}
+
+.sig-chat-close:hover {
+  background: var(--sigchat-blue-soft);
+  border-color: var(--sigchat-blue-border);
+  color: var(--sigchat-blue);
+  transform: rotate(90deg);
+}
+
+.sig-chat-close:focus-visible {
+  outline: 2px solid var(--sigchat-blue);
+  outline-offset: 2px;
+}
+
+/* ---------- Message list ---------- */
+.sig-chat-list {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 13px;
+  padding: 16px 14px 10px;
+  background: var(--sigchat-list-bg);
+  overflow-y: auto;
+  overflow-x: hidden;
+  overscroll-behavior: contain; /* scrolling the chat never scrolls the page */
+  scroll-behavior: smooth;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(125, 125, 140, 0.35) transparent;
+}
+
+.sig-chat-list::-webkit-scrollbar {
+  width: 6px;
+}
+
+.sig-chat-list::-webkit-scrollbar-thumb {
+  background: rgba(125, 125, 140, 0.35);
+  border-radius: 999px;
+}
+
+.sig-chat-list::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+/* ---------- Messages ---------- */
+.sig-chat-msg {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  animation: sigChatMsgIn 0.32s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+.sig-chat-msg--user {
+  justify-content: flex-end;
+}
+
+.sig-chat-msg__avatar {
+  flex-shrink: 0;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  object-fit: cover;
+  border: 1px solid var(--sigchat-border);
+}
+
+.sig-chat-msg__body {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  max-width: 78%;
+}
+
+.sig-chat-msg--ai .sig-chat-msg__body {
+  align-items: flex-start;
+}
+
+.sig-chat-msg--user .sig-chat-msg__body {
+  align-items: flex-end;
+}
+
+.sig-chat-msg__bubble {
+  padding: 10px 13px;
+  font-size: 0.895rem;
+  line-height: 1.55;
+}
+
+.sig-chat-msg__bubble p {
+  margin: 0;
+  white-space: pre-wrap;
+  overflow-wrap: break-word;
+}
+
+.sig-chat-msg--ai .sig-chat-msg__bubble {
+  background: var(--sigchat-card);
+  color: var(--sigchat-text);
+  border: 1px solid var(--sigchat-border);
+  border-radius: 16px 16px 16px 5px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+}
+
+.sig-chat-msg--user .sig-chat-msg__bubble {
+  background: var(--sigchat-user-bubble);
+  color: #ffffff;
+  border-radius: 16px 16px 5px 16px;
+  box-shadow: 0 6px 16px var(--sigchat-user-bubble-shadow);
+}
+
+.sig-chat-msg__time {
+  margin-top: 4px;
+  padding: 0 4px;
+  font-size: 0.63rem;
+  letter-spacing: 0.3px;
+  color: var(--sigchat-text-3);
+}
+
+/* ---------- Typing row (inside the window) ---------- */
+.sig-chat-typing-row {
+  align-items: center;
+}
+
+.sig-chat-typing-row__bubble {
+  display: inline-flex;
+  align-items: center;
+  padding: 12px 15px;
+  background: var(--sigchat-card);
+  border: 1px solid var(--sigchat-border);
+  border-radius: 16px 16px 16px 5px;
+  color: var(--sigchat-blue);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+}
+
+/* ---------- Quick suggestion chips ---------- */
+.sig-chat-suggestions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  padding-left: 36px;
+  animation: sigChatMsgIn 0.35s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+.sig-chat-chip {
+  font-family: 'Inter', sans-serif;
+  font-size: 0.76rem;
+  font-weight: 600;
+  padding: 7px 14px;
+  border-radius: 999px;
+  border: 1px solid var(--sigchat-blue-border);
+  background: var(--sigchat-blue-soft);
+  color: var(--sigchat-blue);
+  cursor: pointer;
+  transition: all 0.25s ease;
+}
+
+.sig-chat-chip:hover {
+  background: var(--sigchat-blue);
+  border-color: var(--sigchat-blue);
+  color: #ffffff;
+  transform: translateY(-2px);
+  box-shadow: 0 8px 18px var(--sigchat-user-bubble-shadow);
+}
+
+.sig-chat-chip:active {
+  transform: translateY(0) scale(0.97);
+}
+
+.sig-chat-chip:focus-visible {
+  outline: 2px solid var(--sigchat-blue);
+  outline-offset: 2px;
+}
+
+/* ============================================================
+   INPUT AREA
+   ============================================================ */
+.sig-chat-input {
+  flex-shrink: 0;
+  padding: 11px 12px 9px;
+  background: var(--sigchat-footer-bg);
+  border-top: 1px solid var(--sigchat-border);
+}
+
+.sig-chat-input__row {
+  display: flex;
+  align-items: flex-end;
+  gap: 8px;
+}
+
+.sig-chat-textarea {
+  flex: 1;
+  min-width: 0;
+  resize: none;
+  border: 1px solid var(--sigchat-border);
+  background: var(--sigchat-input-bg);
+  color: var(--sigchat-text);
+  font-family: 'Inter', sans-serif;
+  font-size: 0.9rem;
+  line-height: 1.45;
+  padding: 10px 13px;
+  border-radius: 14px;
+  max-height: 96px;
+  outline: none;
+  transition: border-color 0.25s ease, box-shadow 0.25s ease;
+}
+
+.sig-chat-textarea::placeholder {
+  color: var(--sigchat-text-3);
+}
+
+.sig-chat-textarea:focus {
+  border-color: var(--sigchat-blue);
+  box-shadow: 0 0 0 3px var(--sigchat-blue-soft);
+}
+
+.sig-chat-send {
+  flex-shrink: 0;
+  width: 40px;
+  height: 40px;
+  display: grid;
+  place-items: center;
+  border: none;
+  border-radius: 50%;
+  background: var(--sigchat-user-bubble);
+  color: #ffffff;
+  cursor: pointer;
+  box-shadow: 0 6px 16px var(--sigchat-user-bubble-shadow);
+  transition: transform 0.2s ease, box-shadow 0.25s ease, opacity 0.2s ease;
+}
+
+.sig-chat-send:hover:not(:disabled) {
+  transform: translateY(-2px);
+  box-shadow: 0 10px 22px var(--sigchat-user-bubble-shadow);
+}
+
+.sig-chat-send:active:not(:disabled) {
+  transform: translateY(0) scale(0.94);
+}
+
+.sig-chat-send:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+  box-shadow: none;
+}
+
+.sig-chat-send:focus-visible {
+  outline: 2px solid var(--sigchat-blue);
+  outline-offset: 2px;
+}
+
+.sig-chat-hint {
+  margin-top: 7px;
+  text-align: center;
+  font-size: 0.64rem;
+  letter-spacing: 0.3px;
+  color: var(--sigchat-text-3);
+}
+
+/* ============================================================
+   ANIMATIONS
+   ============================================================ */
+@keyframes sigChatFloat {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-7px);
+  }
+}
+
+@keyframes sigChatThink {
+  0%,
+  100% {
+    transform: translateY(0) rotate(0deg);
+  }
+  25% {
+    transform: translateY(-5px) rotate(-2deg);
+  }
+  75% {
+    transform: translateY(-2px) rotate(2deg);
+  }
+}
+
+@keyframes sigChatRingPulse {
+  0% {
+    transform: scale(0.95);
+    opacity: 0.7;
+  }
+  100% {
+    transform: scale(1.35);
+    opacity: 0;
+  }
+}
+
+@keyframes sigChatStatusPulse {
+  0% {
+    transform: scale(0.7);
+    opacity: 0.6;
+  }
+  70%,
+  100% {
+    transform: scale(1.6);
+    opacity: 0;
+  }
+}
+
+@keyframes sigChatFloatIn {
+  from {
+    opacity: 0;
+    transform: translateY(8px) scale(0.9);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@keyframes sigChatMsgIn {
+  from {
+    opacity: 0;
+    transform: translateY(10px) scale(0.97);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@keyframes sigChatDot {
+  0%,
+  60%,
+  100% {
+    transform: translateY(0);
+    opacity: 0.45;
+  }
+  30% {
+    transform: translateY(-4px);
+    opacity: 1;
+  }
+}
+
+/* ============================================================
+   RESPONSIVE
+   ============================================================ */
+@media (max-width: 1024px) {
+  .sig-chat-root {
+    left: 22px;
+    bottom: 24px;
+    gap: 44px;
+  }
+  .sig-chat-avatar {
+    width: 58px;
+    height: 58px;
+  }
+  .sig-chat-window {
+    width: min(360px, calc(100vw - 44px));
+    height: min(540px, calc(100vh - 230px));
+  }
+}
+
+@media (max-width: 640px) {
+  .sig-chat-root {
+    left: 12px;
+    right: 12px;
+    bottom: calc(12px + env(safe-area-inset-bottom, 0px));
+    gap: 0;
+  }
+
+  .sig-chat-window {
+    width: 100%;
+    height: min(620px, 80vh, calc(100vh - 110px));
+    min-height: 240px;
+    border-radius: 18px;
+    transform-origin: bottom center;
+  }
+
+  /* On small screens the avatar steps aside while the chat is open */
+  .sig-chat-root.is-open .sig-chat-launcher {
+    display: none;
+  }
+
+  .sig-chat-avatar {
+    width: 54px;
+    height: 54px;
+  }
+
+  .sig-chat-avatar__label {
+    display: none;
+  }
+
+  .sig-chat-msg__body {
+    max-width: 85%;
+  }
+
+  .sig-chat-suggestions {
+    padding-left: 0;
+  }
+}
+
+@media (max-width: 380px) {
+  .sig-chat-header {
+    padding: 10px;
+    gap: 9px;
+  }
+  .sig-chat-list {
+    padding: 14px 11px 8px;
+  }
+  .sig-chat-input {
+    padding: 9px 10px 8px;
+  }
+  .sig-chat-hint {
+    display: none;
+  }
+  .sig-chat-chip {
+    font-size: 0.73rem;
+    padding: 6px 11px;
+  }
+  .sig-chat-msg__bubble {
+    font-size: 0.87rem;
+  }
+}
+
+/* Short (landscape) viewports on desktop */
+@media (max-height: 560px) and (min-width: 641px) {
+  .sig-chat-root {
+    bottom: 16px;
+    gap: 44px;
+  }
+  .sig-chat-avatar {
+    width: 54px;
+    height: 54px;
+  }
+  .sig-chat-window {
+    height: calc(100vh - 210px);
+    min-height: 200px;
+  }
+}
+
+/* The mobile slide-in menu is a left-side drawer (z-index 1000).
+   Hide the assistant while it is open so it never blocks a menu link. */
+@media (max-width: 768px) {
+  .app-wrapper:has(.nav-links.active) .sig-chat-root {
+    opacity: 0;
+    visibility: hidden;
+    pointer-events: none;
+  }
+}
+
+/* ============================================================
+   ACCESSIBILITY – reduced motion
+   ============================================================ */
+@media (prefers-reduced-motion: reduce) {
+  .sig-chat-avatar,
+  .sig-chat-avatar__status::after,
+  .sig-chat-avatar.is-typing,
+  .sig-chat-avatar.is-typing::after,
+  .sig-chat-float-typing,
+  .sig-chat-msg,
+  .sig-chat-suggestions,
+  .sig-chat-dots i {
+    animation: none !important;
+  }
+
+  .sig-chat-window {
+    transition: none !important;
+  }
+
+  .sig-chat-list {
+    scroll-behavior: auto;
+  }
+
+  .sig-chat-close:hover {
+    transform: none;
+  }
+}
