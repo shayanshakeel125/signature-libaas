@@ -52,7 +52,9 @@
 .sig-chat-root {
   position: fixed;
   left: 28px;
-  bottom: 30px;
+  /* --sig-chat-kb = on-screen keyboard height (JS se aata hai).
+     Chat window aur robot dono keyboard ke upar khud shift ho jate hain. */
+  bottom: calc(30px + var(--sig-chat-kb, 0px));
   z-index: 1400; /* above navbar (1000), below modals (3000) */
   display: flex;
   flex-direction: column;
@@ -60,7 +62,7 @@
   gap: 46px; /* room for the typing bubble above the avatar */
   font-family: 'Inter', sans-serif;
   pointer-events: none; /* empty space never blocks the page */
-  transition: opacity 0.3s ease;
+  transition: opacity 0.3s ease, bottom 0.25s ease;
 }
 
 .sig-chat-launcher,
@@ -194,7 +196,8 @@
 }
 
 /* ============================================================
-   TYPING BUBBLE ABOVE THE ROBOT'S HEAD
+   TYPING / LISTENING BUBBLE BESIDE THE ROBOT'S HEAD
+   (images 3 & 4 jaisa thought-bubble look)
    ============================================================ */
 .sig-chat-float-typing {
   position: absolute;
@@ -223,6 +226,35 @@
   border-right: 1px solid var(--sigchat-border);
   border-bottom: 1px solid var(--sigchat-border);
   transform: rotate(45deg);
+}
+
+/* Thought-bubble ke chhote circles (robot ke sar ke paas) */
+.sig-chat-float-typing::before {
+  content: '';
+  position: absolute;
+  left: 8px;
+  bottom: -13px;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--sigchat-card);
+  border: 1px solid var(--sigchat-border);
+  opacity: 0.9;
+}
+
+/* AI reply kar raha hai → animated dots (blue) */
+.sig-chat-float-typing--ai {
+  color: var(--sigchat-blue);
+}
+
+/* User type kar raha hai → robot sun raha hai (calm, amber dots) */
+.sig-chat-float-typing--listening {
+  color: var(--gold, #c9a961);
+  border-color: color-mix(in srgb, var(--gold, #c9a961) 40%, transparent);
+}
+
+.sig-chat-float-typing--listening .sig-chat-dots i {
+  animation-duration: 1.8s;
 }
 
 /* Animated three dots */
@@ -258,8 +290,9 @@
   display: flex;
   flex-direction: column;
   width: min(384px, calc(100vw - 56px));
-  /* keeps the header + close button clear of the sticky navbar at all times */
-  height: min(560px, calc(100vh - 240px));
+  /* keeps the header + close button clear of the sticky navbar at all times
+     (+ keyboard height when the mobile keyboard is open) */
+  height: min(560px, calc(100vh - 240px - var(--sig-chat-kb, 0px)));
   min-height: 320px;
   background: var(--sigchat-window-bg);
   backdrop-filter: blur(18px);
@@ -730,7 +763,7 @@
 @media (max-width: 1024px) {
   .sig-chat-root {
     left: 22px;
-    bottom: 24px;
+    bottom: calc(24px + var(--sig-chat-kb, 0px));
     gap: 44px;
   }
   .sig-chat-avatar {
@@ -739,7 +772,7 @@
   }
   .sig-chat-window {
     width: min(360px, calc(100vw - 44px));
-    height: min(540px, calc(100vh - 230px));
+    height: min(540px, calc(100vh - 230px - var(--sig-chat-kb, 0px)));
   }
 }
 
@@ -747,26 +780,29 @@
   .sig-chat-root {
     left: 12px;
     right: 12px;
-    bottom: calc(12px + env(safe-area-inset-bottom, 0px));
-    gap: 0;
+    bottom: calc(12px + env(safe-area-inset-bottom, 0px) + var(--sig-chat-kb, 0px));
+    gap: 10px;
+    align-items: stretch;
   }
 
   .sig-chat-window {
     width: 100%;
-    height: min(620px, 80vh, calc(100vh - 110px));
-    min-height: 240px;
+    /* keyboard ke upar fit: window + robot launcher dono jagah banayein */
+    height: min(620px, calc(100vh - 150px - var(--sig-chat-kb, 0px)));
+    min-height: 220px;
     border-radius: 18px;
     transform-origin: bottom center;
   }
 
-  /* On small screens the avatar steps aside while the chat is open */
+  /* Robot avatar chat khula hone par bhi dikhta hai (keyboard ke upar, image 2 jaisa) */
   .sig-chat-root.is-open .sig-chat-launcher {
-    display: none;
+    display: block;
+    align-self: flex-start;
   }
 
   .sig-chat-avatar {
-    width: 54px;
-    height: 54px;
+    width: 50px;
+    height: 50px;
   }
 
   .sig-chat-avatar__label {
@@ -783,6 +819,9 @@
 }
 
 @media (max-width: 380px) {
+  .sig-chat-root {
+    gap: 8px;
+  }
   .sig-chat-header {
     padding: 10px;
     gap: 9px;
@@ -803,12 +842,16 @@
   .sig-chat-msg__bubble {
     font-size: 0.87rem;
   }
+  .sig-chat-avatar {
+    width: 46px;
+    height: 46px;
+  }
 }
 
 /* Short (landscape) viewports on desktop */
 @media (max-height: 560px) and (min-width: 641px) {
   .sig-chat-root {
-    bottom: 16px;
+    bottom: calc(16px + var(--sig-chat-kb, 0px));
     gap: 44px;
   }
   .sig-chat-avatar {
@@ -816,7 +859,7 @@
     height: 54px;
   }
   .sig-chat-window {
-    height: calc(100vh - 210px);
+    height: calc(100vh - 210px - var(--sig-chat-kb, 0px));
     min-height: 200px;
   }
 }

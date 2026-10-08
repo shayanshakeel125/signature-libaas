@@ -31,6 +31,7 @@ export default function Chatbot() {
   const [inputValue, setInputValue] = useState('');
   const [isTyping, setIsTyping] = useState(false);
   const [showSuggestions, setShowSuggestions] = useState(false);
+  const [kbHeight, setKbHeight] = useState(0); // on-screen keyboard height (px)
 
   const inputRef = useRef(null);
   const listRef = useRef(null);
@@ -104,6 +105,31 @@ export default function Chatbot() {
     return () => document.removeEventListener('mousedown', onPointerDown);
   }, [isOpen, closeChat]);
 
+  /* ===== MOBILE KEYBOARD TRACKING (visualViewport API) =====
+     Jab mobile keyboard khulta hai toh visual viewport chhoti ho jati hai.
+     Hum keyboard ki height nikaal kar root par CSS variable dete hain —
+     CSS usse chat window aur robot ko keyboard ke upar shift karne ke liye use karti hai. */
+  useEffect(() => {
+    const viewport = window.visualViewport;
+    if (!viewport) return undefined;
+
+    const updateKeyboardHeight = () => {
+      // Layout viewport aur visual viewport ka farq = keyboard (ya browser UI) height
+      const overlap =
+        window.innerHeight - viewport.height - viewport.offsetTop;
+      // Guard: sirf significant height (real keyboard) par apply karo
+      setKbHeight(overlap > 80 ? overlap : 0);
+    };
+
+    updateKeyboardHeight();
+    viewport.addEventListener('resize', updateKeyboardHeight);
+    viewport.addEventListener('scroll', updateKeyboardHeight);
+    return () => {
+      viewport.removeEventListener('resize', updateKeyboardHeight);
+      viewport.removeEventListener('scroll', updateKeyboardHeight);
+    };
+  }, []);
+
   const handleSend = useCallback(
     async (overrideText, sendOptions = {}) => {
       const text =
@@ -148,8 +174,14 @@ export default function Chatbot() {
 
   const canSend = inputValue.trim().length > 0 && !isTyping;
 
+  // User jab text likh raha ho (AI ka reply pending nahi) — robot "sun raha" hai
+  const isUserTyping = isOpen && !isTyping && inputValue.trim().length > 0;
+
   return (
-    <div className={`sig-chat-root${isOpen ? ' is-open' : ''}`}>
+    <div
+      className={`sig-chat-root${isOpen ? ' is-open' : ''}`}
+      style={{ '--sig-chat-kb': `${kbHeight}px` }}
+    >
       {/* ============ MESSENGER WINDOW ============ */}
       <section
         id="sig-chat-window"
@@ -277,7 +309,12 @@ export default function Chatbot() {
 
       {/* ============ FLOATING ROBOT AVATAR ============ */}
       <div className="sig-chat-launcher">
-        {isTyping && <ChatbotTyping variant="float" />}
+        {/* User type kar raha ho → calm "listening" bubble · AI reply kar raha ho → animated dots bubble */}
+        {isTyping ? (
+          <ChatbotTyping variant="float" />
+        ) : isUserTyping ? (
+          <ChatbotTyping variant="float-listening" />
+        ) : null}
 
         <button
           type="button"

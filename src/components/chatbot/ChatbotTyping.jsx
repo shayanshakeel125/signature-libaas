@@ -11,15 +11,25 @@ function Dots() {
 /**
  * "Signature AI is typing…" indicators.
  *
- * variant="inline" → shown inside the message list (robot avatar + dot bubble)
- * variant="float"  → small speech bubble floating above the robot's head
+ * variant="inline"         → shown inside the message list (robot avatar + dot bubble)
+ * variant="float"          → thought bubble floating beside the robot (AI is replying)
+ * variant="float-listening"→ calm dot bubble (user is typing their message)
  */
 export default function ChatbotTyping({ variant = 'inline', avatarSrc }) {
   if (variant === 'float') {
     return (
-      <div className="sig-chat-float-typing" role="status">
+      <div className="sig-chat-float-typing sig-chat-float-typing--ai" role="status">
         <Dots />
         <span className="sig-chat-sr">Signature AI is typing</span>
+      </div>
+    );
+  }
+
+  if (variant === 'float-listening') {
+    return (
+      <div className="sig-chat-float-typing sig-chat-float-typing--listening" role="status">
+        <Dots />
+        <span className="sig-chat-sr">Signature AI is reading your message</span>
       </div>
     );
   }
